@@ -1,0 +1,20 @@
+Fitur Sistem Tiket Event:
+
+Event
+
+Tambah event (nama, tanggal, lokasi, harga, stok tiket)
+Lihat daftar dan detail event
+Ubah data event
+Hapus event
+
+Pembeli
+5. Tambah pembeli (nama, email)
+6. Lihat daftar dan detail pembeli
+7. Ubah data pembeli
+8. Hapus pembeli
+
+Pesanan
+9. Beli tiket (pilih pembeli, event, jumlah), stok tiket otomatis berkurang
+10. Lihat daftar pesanan, bisa difilter per pembeli atau per event
+11. Ubah pesanan (jumlah tiket atau status: pending, lunas, batal), stok menyesuaikan
+12. Batalkan/hapus pesanan, stok tiket kembali ke event
