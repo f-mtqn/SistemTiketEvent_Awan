@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi Skalabilitas Sistem Tiket Event — Komputasi Awan</title>
+  
+  <!-- Font IBM Plex Sans, Space Grotesk, dan IBM Plex Mono (dengan fallback sistem jika offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ==========================================================================
+       1. VARIABEL & DESAIN TOKEN (Sesuai style.css Sistem Tiket Event)
+       ========================================================================== */
+    :root {
+      --cream:       #EEE9DF;
+      --cream-light: #F7F4ED;
+      --input-bg:    #FBF9F5;
+      --sand:        #C9C1B1;
+      --slate:       #2C3B4D;
+      --amber:       #FFB162;
+      --amber-light: #FFF3E5;
+      --rust:        #A35139;
+      --rust-light:  #FBEAE7;
+      --navy:        #1B2632;
+      --navy-light:  #243344;
+      --green:       #2D7A4F;
+      --green-light: #EBF5F0;
+      --gray-restart:#9CA3AF;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+
+      --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      --font-body:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+
+      --shadow-sm: 0 2px 4px rgba(27, 38, 50, 0.05);
+      --shadow-md: 0 6px 16px rgba(27, 38, 50, 0.08);
+    }
+
+    /* Reset Dasar */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--cream);
+      color: var(--navy);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 24px 20px 48px;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    /* ==========================================================================
+       2. HEADER & NAVIGASI TAB
+       ========================================================================== */
+    .header {
+      background: var(--navy);
+      color: var(--cream);
+      padding: 28px 32px;
+      border-radius: var(--radius-md);
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .badge-top {
+      align-self: flex-start;
+      background: rgba(255, 177, 98, 0.18);
+      color: var(--amber);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 177, 98, 0.35);
+    }
+
+    .header-title {
+      font-family: var(--font-heading);
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: var(--cream-light);
+      letter-spacing: -0.01em;
+    }
+
+    .header-desc {
+      color: var(--sand);
+      font-size: 0.95rem;
+      max-width: 780px;
+    }
+
+    /* Tab Switcher */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--sand);
+      padding-bottom: 2px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 12px 22px;
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--slate);
+      cursor: pointer;
+      position: relative;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn:hover {
+      color: var(--navy);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .tab-btn.active {
+      color: var(--navy);
+      background: var(--cream-light);
+      border: 1px solid var(--sand);
+      border-bottom-color: var(--cream-light);
+      margin-bottom: -2px;
+      padding-bottom: 13px;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--amber);
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================================================
+       3. KARTU & PANEL LAYOUT UMUM
+       ========================================================================== */
+    .card {
+      background: var(--cream-light);
+      border: 1px solid var(--sand);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Kontrol Panel */
+    .control-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+      align-items: center;
+      background: var(--input-bg);
+      border: 1px solid var(--sand);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .control-row { grid-template-columns: 1fr; }
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--slate);
+    }
+
+    .slider-val-badge {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      background: var(--navy);
+      color: var(--cream);
+      border-radius: 999px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--sand);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--amber);
+      border: 2px solid var(--navy);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--slate);
+      font-family: var(--font-mono);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .button-group { justify-content: flex-start; }
+    }
+
+    /* Tombol */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-primary {
+      background: var(--amber);
+      color: var(--navy);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--navy);
+      border: 1.5px solid var(--slate);
+    }
+
+    .btn-rust {
+      background: var(--rust);
+      color: var(--cream-light);
+    }
+
+    /* Status Chip */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .chip-normal {
+      background: var(--green-light);
+      color: var(--green);
+      border: 1px solid rgba(45, 122, 79, 0.3);
+    }
+
+    .chip-warning {
+      background: var(--amber-light);
+      color: #925400;
+      border: 1px solid rgba(255, 177, 98, 0.6);
+    }
+
+    .chip-overload {
+      background: var(--rust-light);
+      color: var(--rust);
+      border: 1px solid rgba(163, 81, 57, 0.4);
+    }
+
+    .chip-restart {
+      background: #E5E7EB;
+      color: #4B5563;
+      border: 1px solid #9CA3AF;
+    }
+
+    /* Bar Beban */
+    .load-bar-wrap {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 999px;
+      height: 12px;
+      overflow: hidden;
+      margin: 8px 0;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .load-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    .load-bar-fill.normal   { background-color: var(--green); }
+    .load-bar-fill.warning  { background-color: var(--amber); }
+    .load-bar-fill.overload { background-color: var(--rust); }
+
+    /* ==========================================================================
+       4. VISUALISASI VERTICAL SCALING (TAB A)
+       ========================================================================== */
+    .vertical-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 340px;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.7) 0%, rgba(201,193,177,0.3) 100%);
+      border: 1px dashed var(--sand);
+      border-radius: var(--radius-md);
+      padding: 32px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Kotak Server Vertical */
+    .server-box-vertical {
+      background: var(--navy);
+      color: var(--cream);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--slate);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ukuran Kotak Berdasarkan Tier */
+    .server-box-vertical.tier-kecil {
+      width: 300px;
+      min-height: 220px;
+      padding: 18px;
+    }
+
+    .server-box-vertical.tier-sedang {
+      width: 400px;
+      min-height: 260px;
+      padding: 22px;
+    }
+
+    .server-box-vertical.tier-besar {
+      width: 500px;
+      min-height: 300px;
+      padding: 26px;
+    }
+
+    @media (max-width: 600px) {
+      .server-box-vertical.tier-kecil,
+      .server-box-vertical.tier-sedang,
+      .server-box-vertical.tier-besar {
+        width: 100%;
+        min-height: auto;
+      }
+    }
+
+    /* State Restart / Downtime */
+    .server-box-vertical.restarting {
+      background: #4B5563 !important;
+      border-color: #9CA3AF !important;
+      box-shadow: none !important;
+      animation: pulseRestart 1s infinite alternate;
+    }
+
+    @keyframes pulseRestart {
+      from { opacity: 0.9; filter: grayscale(80%); }
+      to   { opacity: 0.6; filter: grayscale(100%); }
+    }
+
+    .restart-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(31, 41, 55, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #F3F4F6;
+      font-family: var(--font-heading);
+      z-index: 10;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .restart-spinner {
+      width: 38px;
+      height: 38px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .server-header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .server-title-tag {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spec-badges-list {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 10px 0 14px;
+    }
+
+    .spec-badge {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--cream-light);
+    }
+
+    .server-metrics-box {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+
+    .metrics-top-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+    }
+
+    /* ==========================================================================
+       5. VISUALISASI HORIZONTAL SCALING (TAB B)
+       ========================================================================== */
+    .horizontal-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.7) 0%, rgba(201,193,177,0.3) 100%);
+      border: 1px dashed var(--sand);
+      border-radius: var(--radius-md);
+      padding: 28px 20px 32px;
+    }
+
+    /* Kotak Load Balancer */
+    .lb-box {
+      background: var(--navy);
+      color: var(--cream);
+      border: 2px solid var(--amber);
+      border-radius: var(--radius-md);
+      padding: 16px 28px;
+      text-align: center;
+      min-width: 320px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+
+    .lb-title {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .lb-subtitle {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--sand);
+      margin-top: 4px;
+    }
+
+    /* Panah Distribusi Beban */
+    .distribution-lines {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 48px;
+      position: relative;
+      width: 100%;
+      max-width: 760px;
+    }
+
+    .arrow-down-svg {
+      width: 100%;
+      height: 48px;
+    }
+
+    /* Grid Server Horisontal */
+    .servers-grid-horizontal {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .server-box-horizontal {
+      flex: 1 1 170px;
+      max-width: 195px;
+      background: var(--navy-light);
+      color: var(--cream);
+      border: 1.5px solid var(--slate);
+      border-radius: var(--radius-sm);
+      padding: 14px 12px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .server-node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .server-node-name {
+      font-family: var(--font-heading);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--amber);
+    }
+
+    .server-node-spec {
+      font-size: 0.75rem;
+      color: var(--sand);
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 4px;
+    }
+
+    .node-metrics {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+
+    /* ==========================================================================
+       6. PANEL PENJELASAN DINAMIS (EXPLANATION CARDS)
+       ========================================================================== */
+    .explanation-panel {
+      border-left: 5px solid var(--slate);
+      background: var(--cream-light);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 20px 24px;
+      margin-top: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .explanation-panel.status-normal {
+      border-left-color: var(--green);
+      background: #F4FAF6;
+    }
+
+    .explanation-panel.status-warning {
+      border-left-color: var(--amber);
+      background: #FFFDF8;
+    }
+
+    .explanation-panel.status-overload {
+      border-left-color: var(--rust);
+      background: #FDF6F5;
+    }
+
+    .explanation-panel.status-restart {
+      border-left-color: #6B7280;
+      background: #F3F4F6;
+    }
+
+    .exp-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .exp-title {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .exp-body {
+      font-size: 0.9375rem;
+      color: var(--navy);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .exp-points {
+      margin-top: 8px;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.885rem;
+      color: var(--slate);
+    }
+
+    .exp-points li strong {
+      color: var(--navy);
+    }
+
+    /* Total Kapasitas Banner */
+    .capacity-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--navy);
+      color: var(--cream);
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .cap-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+
+    .cap-badge {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--amber);
+      background: rgba(255, 177, 98, 0.15);
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 177, 98, 0.3);
+    }
+
+    /* ==========================================================================
+       7. TABEL PERBANDINGAN
+       ========================================================================== */
+    .comparison-section {
+      margin-top: 36px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--sand);
+      border-radius: var(--radius-md);
+      background: var(--cream-light);
+      box-shadow: var(--shadow-sm);
+    }
+
+    table.comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      text-align: left;
+    }
+
+    table.comp-table thead th {
+      background: var(--navy);
+      color: var(--cream);
+      font-family: var(--font-heading);
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--amber);
+    }
+
+    table.comp-table thead th:first-child { width: 22%; }
+    table.comp-table thead th:nth-child(2) { width: 39%; }
+    table.comp-table thead th:nth-child(3) { width: 39%; }
+
+    table.comp-table tbody tr {
+      border-bottom: 1px solid var(--sand);
+      transition: background 0.15s ease;
+    }
+
+    table.comp-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    table.comp-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    table.comp-table td {
+      padding: 14px 18px;
+      vertical-align: top;
+      color: var(--navy);
+    }
+
+    table.comp-table td.col-param {
+      font-weight: 700;
+      font-family: var(--font-heading);
+      color: var(--slate);
+      background: rgba(201, 193, 177, 0.2);
+    }
+
+    .table-tag-v {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--rust);
+      background: var(--rust-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+
+    .table-tag-h {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--green);
+      background: var(--green-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+
+    /* Footer info */
+    .footer-note {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 0.85rem;
+      color: var(--slate);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- HEADER HALAMAN -->
+    <header class="header">
+      <div class="badge-top">Tugas 9 — Komputasi Awan & Terdistribusi</div>
+      <h1 class="header-title">Simulasi Skalabilitas Sistem Tiket Event</h1>
+      <p class="header-desc">
+        Demonstrasi interaktif perbedaan karakteristik <strong>Vertical Scalability (Scale-up / Scale-down)</strong> 
+        dan <strong>Horizontal Scalability (Scale-out / Scale-in)</strong> dalam menangani lonjakan beban permintaan tiket (req/s).
+      </p>
+    </header>
+
+    <!-- TAB SWITCHER -->
+    <nav class="tab-nav" aria-label="Pilihan Ilustrasi Skalabilitas">
+      <button class="tab-btn active" id="tabBtnA" onclick="switchTab('A')">
+        <span>📦</span> Tab A: Vertical Scalability (Scale-Up)
+      </button>
+      <button class="tab-btn" id="tabBtnB" onclick="switchTab('B')">
+        <span>🌐</span> Tab B: Horizontal Scalability (Scale-Out/In)
+      </button>
+    </nav>
+
+    <!-- ====================================================================
+         TAB A: VERTICAL SCALABILITY (SCALE-UP / SCALE-DOWN)
+         ==================================================================== -->
+    <section class="tab-pane active" id="paneA">
+      <div class="card">
+        <div class="card-title">
+          <span>Panel Kontrol Server Tunggal (Vertical)</span>
+          <span id="tierBadgeA" class="chip chip-normal">Tier: Kecil</span>
+        </div>
+
+        <!-- Kontrol Beban & Spesifikasi -->
+        <div class="control-row">
+          <!-- Slider Beban Pengguna -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="loadSliderA">Beban Pengguna (Trafik Tiket):</label>
+              <span class="slider-val-badge" id="sliderValLabelA">100 req/s</span>
+            </div>
+            <input type="range" id="loadSliderA" min="0" max="600" step="10" value="100" oninput="handleLoadChangeA(this.value)" />
+            <div class="slider-ticks">
+              <span>0</span>
+              <span>150</span>
+              <span>300</span>
+              <span>450</span>
+              <span>600 req/s</span>
+            </div>
+          </div>
+
+          <!-- Tombol Naikkan / Turunkan Spesifikasi -->
+          <div class="button-group">
+            <button class="btn btn-secondary" id="btnScaleDownA" onclick="scaleVertical(-1)">
+              ⬇️ Turunkan Spesifikasi
+            </button>
+            <button class="btn btn-primary" id="btnScaleUpA" onclick="scaleVertical(1)">
+              ⬆️ Naikkan Spesifikasi
+            </button>
+          </div>
+        </div>
+
+        <!-- Area Visualisasi Server Tunggal -->
+        <div class="vertical-stage">
+          <div class="server-box-vertical tier-kecil" id="serverBoxA">
+            <!-- Overlay saat restart / upgrade -->
+            <div class="restart-overlay" id="restartOverlayA" style="display: none;">
+              <div class="restart-spinner"></div>
+              <div>
+                <strong style="font-size: 1.1rem; color: var(--amber);">Restarting Server...</strong>
+                <p style="font-size: 0.85rem; margin-top: 4px; color: #E5E7EB;">
+                  Downtime 1,5 detik — Layanan offline sementara saat spesifikasi diubah.
+                </p>
+              </div>
+            </div>
+
+            <!-- Bagian Atas Server -->
+            <div>
+              <div class="server-header-info">
+                <div class="server-title-tag">
+                  <span>🖥️</span>
+                  <span id="serverNameA">Server Utama (Tier Kecil)</span>
+                </div>
+                <span id="serverStatusChipA" class="chip chip-normal">Normal</span>
+              </div>
+
+              <!-- Badge Spesifikasi Hardware -->
+              <div class="spec-badges-list">
+                <span class="spec-badge" id="cpuBadgeA">vCPU: 1 Core</span>
+                <span class="spec-badge" id="ramBadgeA">RAM: 1 GB</span>
+                <span class="spec-badge" id="capBadgeA">Kapasitas: 100 req/s</span>
+              </div>
+            </div>
+
+            <!-- Bagian Metrik & Beban -->
+            <div class="server-metrics-box">
+              <div class="metrics-top-row">
+                <span>Beban: <strong id="loadTextA">100</strong> / <span id="capTextA">100</span> req/s</span>
+                <span id="pctTextA"><strong>100%</strong></span>
+              </div>
+              <div class="load-bar-wrap">
+                <div class="load-bar-fill normal" id="loadBarA" style="width: 100%;"></div>
+              </div>
+              <div style="font-size: 0.78rem; color: var(--sand); text-align: right;" id="statusNoteA">
+                Status: Beban Penuh
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Penjelasan Dinamis Tab A -->
+        <div class="explanation-panel status-normal" id="expPanelA">
+          <div class="exp-header">
+            <span id="expIconA" style="font-size: 1.4rem;">💡</span>
+            <h3 class="exp-title" id="expTitleA">Kondisi Operasional Normal</h3>
+          </div>
+          <div class="exp-body" id="expBodyA">
+            <p>Server sedang melayani beban trafik dalam rentang kapasitas aman.</p>
+          </div>
+          <ul class="exp-points" id="expPointsA">
+            <!-- Poin-poin konsep cloud akan diisi secara dinamis oleh JavaScript -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB B: HORIZONTAL SCALABILITY (SCALE-OUT / SCALE-IN)
+         ==================================================================== -->
+    <section class="tab-pane" id="paneB">
+      <div class="card">
+        <div class="card-title">
+          <span>Panel Arsitektur Terdistribusi (Horizontal)</span>
+          <span id="nodeCountBadgeB" class="chip chip-normal">2 Server Aktif</span>
+        </div>
+
+        <!-- Banner Total Kapasitas Cluster -->
+        <div class="capacity-banner">
+          <div class="cap-info">
+            <span>⚡ Total Kapasitas Terdistribusi:</span>
+            <span class="cap-badge" id="totalCapBadgeB">200 req/s</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--sand);">
+            Kapasitas per node: <strong>100 req/s</strong> (1 vCPU, 1 GB RAM)
+          </div>
+        </div>
+
+        <!-- Kontrol Beban & Scale-Out/In -->
+        <div class="control-row">
+          <!-- Slider Beban Pengguna -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="loadSliderB">Beban Pengguna Total (Trafik Tiket):</label>
+              <span class="slider-val-badge" id="sliderValLabelB">150 req/s</span>
+            </div>
+            <input type="range" id="loadSliderB" min="0" max="600" step="10" value="150" oninput="handleLoadChangeB(this.value)" />
+            <div class="slider-ticks">
+              <span>0</span>
+              <span>150</span>
+              <span>300</span>
+              <span>450</span>
+              <span>600 req/s</span>
+            </div>
+          </div>
+
+          <!-- Tombol Scale Out / In -->
+          <div class="button-group">
+            <button class="btn btn-secondary" id="btnScaleInB" onclick="scaleHorizontal(-1)">
+              ➖ Scale-In (Kurangi Server)
+            </button>
+            <button class="btn btn-primary" id="btnScaleOutB" onclick="scaleHorizontal(1)">
+              ➕ Scale-Out (Tambah Server)
+            </button>
+          </div>
+        </div>
+
+        <!-- Area Visualisasi Load Balancer + Node Server -->
+        <div class="horizontal-stage">
+          <!-- Kotak Load Balancer -->
+          <div class="lb-box">
+            <div class="lb-title">
+              <span>⚖️</span>
+              <span>Load Balancer (Reverse Proxy / Nginx)</span>
+            </div>
+            <div class="lb-subtitle" id="lbDistText">
+              Membagi 150 req/s ke 2 server (~75 req/s per server)
+            </div>
+          </div>
+
+          <!-- Panah Distribusi Beban (SVG) -->
+          <div class="distribution-lines">
+            <svg class="arrow-down-svg" viewBox="0 0 400 48" preserveAspectRatio="none">
+              <!-- Garis vertikal utama dari Load Balancer -->
+              <line x1="200" y1="0" x2="200" y2="24" stroke="#2C3B4D" stroke-width="2" stroke-dasharray="4" />
+              <!-- Garis horizontal pembagi -->
+              <line x1="40" y1="24" x2="360" y2="24" stroke="#2C3B4D" stroke-width="2" />
+              <!-- Panah ke node-node -->
+              <path d="M 40,24 L 40,44 M 35,38 L 40,46 L 45,38" fill="none" stroke="#2C3B4D" stroke-width="2" />
+              <path d="M 120,24 L 120,44 M 115,38 L 120,46 L 125,38" fill="none" stroke="#2C3B4D" stroke-width="2" />
+              <path d="M 200,24 L 200,44 M 195,38 L 200,46 L 205,38" fill="none" stroke="#2C3B4D" stroke-width="2" />
+              <path d="M 280,24 L 280,44 M 275,38 L 280,46 L 285,38" fill="none" stroke="#2C3B4D" stroke-width="2" />
+              <path d="M 360,24 L 360,44 M 355,38 L 360,46 L 365,38" fill="none" stroke="#2C3B4D" stroke-width="2" />
+            </svg>
+          </div>
+
+          <!-- Container Grid Server Horisontal (1-5 Node) -->
+          <div class="servers-grid-horizontal" id="serversGridB">
+            <!-- Node server digenerate oleh JavaScript -->
+          </div>
+        </div>
+
+        <!-- Panel Penjelasan Dinamis Tab B -->
+        <div class="explanation-panel status-normal" id="expPanelB">
+          <div class="exp-header">
+            <span id="expIconB" style="font-size: 1.4rem;">💡</span>
+            <h3 class="exp-title" id="expTitleB">Analisis Arsitektur Horizontal</h3>
+          </div>
+          <div class="exp-body" id="expBodyB">
+            <p>Arsitektur horizontal membagi beban ke beberapa server identik melalui Load Balancer.</p>
+          </div>
+          <ul class="exp-points" id="expPointsB">
+            <!-- Poin-poin konsep horizontal akan diisi secara dinamis oleh JavaScript -->
+          </ul>
+        </div>
+
+        <!-- ==================================================================
+             TABEL PERBANDINGAN VERTICAL VS HORIZONTAL
+             ================================================================== -->
+        <div class="comparison-section">
+          <div class="card-title">
+            <span>Tabel Perbandingan: Vertical vs Horizontal Scalability</span>
+            <span class="chip chip-normal" style="background: var(--navy); color: var(--cream);">Materi Kuliah</span>
+          </div>
+          
+          <div class="table-wrap">
+            <table class="comp-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Vertical Scalability (Scale-Up)</th>
+                  <th>Horizontal Scalability (Scale-Out)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="col-param">Cara Kerja</td>
+                  <td>
+                    <span class="table-tag-v">Scale-Up / Down</span><br />
+                    Meningkatkan kapasitas <strong>satu server yang sama</strong> dengan menambahkan CPU, RAM, atau storage yang lebih bertenaga.
+                  </td>
+                  <td>
+                    <span class="table-tag-h">Scale-Out / In</span><br />
+                    Menambah atau mengurangi <strong>jumlah node server identik</strong> dalam satu pool/cluster yang bekerja sama.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="col-param">Downtime</td>
+                  <td>
+                    <strong>Ada Downtime (Restart):</strong> Server umumnya harus dihentikan (shutdown/reboot) saat memodifikasi ukuran hardware virtual maupun fisik.
+                  </td>
+                  <td>
+                    <strong>Zero Downtime:</strong> Node baru dapat didaftarkan ke Load Balancer saat traffic berjalan tanpa mengganggu server aktif lainnya.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="col-param">Batas Kapasitas</td>
+                  <td>
+                    <strong>Ada Batas Maksimum (Hardware Ceiling):</strong> Dibatasi oleh spesifikasi tertinggi motherboard/mother-instance yang disediakan penyedia cloud.
+                  </td>
+                  <td>
+                    <strong>Hampir Tanpa Batas (Elastis):</strong> Dapat menambah puluhan hingga ribuan node sesuai kebutuhan trafik pengguna.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="col-param">Ketahanan Gagal (Fault Tolerance)</td>
+                  <td>
+                    <strong>Rentan (Single Point of Failure):</strong> Jika server tunggal mengalami kerusakan hardware atau kernel crash, seluruh aplikasi tiket mati total.
+                  </td>
+                  <td>
+                    <strong>Tinggi (High Availability):</strong> Jika salah satu server mati, Load Balancer otomatis mengalihkan beban ke server lain yang masih sehat.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="col-param">Kebutuhan Tambahan</td>
+                  <td>
+                    <strong>Arsitektur Sederhana:</strong> Tidak membutuhkan Load Balancer atau sinkronisasi session state antar-server.
+                  </td>
+                  <td>
+                    <strong>Kompleksitas Tambahan:</strong> Membutuhkan <em>Load Balancer</em>, shared database terpusat, dan penanganan session yang stateless (misal JWT / Redis).
+                  </td>
+                </tr>
+                <tr>
+                  <td class="col-param">Biaya (Cost Efficiency)</td>
+                  <td>
+                    Biaya per upgrade meningkat secara <strong>eksponensial</strong> pada hardware tier tertinggi; server tetap menyala walau trafik malam hari sepi.
+                  </td>
+                  <td>
+                    Biaya bersifat <strong>linear & fleksibel (Pay-As-You-Go)</strong>: Server bisa dimatikan (Scale-In) saat malam hari untuk memangkas biaya server.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      Sistem Tiket Event — Tugas Komputasi Awan dan Terdistribusi &copy; 2026. File mandiri tanpa dependensi eksternal.
+    </footer>
+
+  </div>
+
+  <!-- ==========================================================================
+       8. JAVASCRIPT LOGIKA INTERAKTIF (VANILLA JS)
+       ========================================================================== -->
+  <script>
+    /* ========================================================================
+       STATE MANAGEMENT & KONFIGURASI
+       ======================================================================== */
+
+    // Konfigurasi 3 Tier Spesifikasi Server untuk Tab A (Vertical)
+    const VERTICAL_TIERS = [
+      {
+        id: 0,
+        nama: 'Kecil',
+        vcpu: '1 vCPU',
+        ram: '1 GB',
+        kapasitas: 100, // req/s
+        cssClass: 'tier-kecil'
+      },
+      {
+        id: 1,
+        nama: 'Sedang',
+        vcpu: '2 vCPU',
+        ram: '4 GB',
+        kapasitas: 250, // req/s
+        cssClass: 'tier-sedang'
+      },
+      {
+        id: 2,
+        nama: 'Besar',
+        vcpu: '4 vCPU',
+        ram: '8 GB',
+        kapasitas: 500, // req/s
+        cssClass: 'tier-besar'
+      }
+    ];
+
+    // State Aplikasi
+    const state = {
+      // Tab A (Vertical)
+      verticalTierIndex: 0,       // Default: Tier Kecil (100 req/s)
+      verticalLoad: 100,           // Default: 100 req/s
+      isRestarting: false,         // Penanda status downtime restart 1.5 detik
+      lastVerticalAction: 'init',  // 'upgrade', 'downgrade', atau 'init'
+
+      // Tab B (Horizontal)
+      horizontalNodes: 2,          // Default: 2 server (total kapasitas 200 req/s)
+      horizontalLoad: 150,         // Default: 150 req/s
+      nodeCapacity: 100,           // Kapasitas tiap server horisontal: 100 req/s
+      lastHorizontalAction: 'init' // 'scale_out', 'scale_in', atau 'init'
+    };
+
+    /* ========================================================================
+       FUNGSI NAVIGASI TAB
+       ======================================================================== */
+    function switchTab(tabKey) {
+      const paneA = document.getElementById('paneA');
+      const paneB = document.getElementById('paneB');
+      const tabBtnA = document.getElementById('tabBtnA');
+      const tabBtnB = document.getElementById('tabBtnB');
+
+      if (tabKey === 'A') {
+        paneA.classList.add('active');
+        paneB.classList.remove('active');
+        tabBtnA.classList.add('active');
+        tabBtnB.classList.remove('active');
+        renderVertical();
+      } else {
+        paneB.classList.add('active');
+        paneA.classList.remove('active');
+        tabBtnB.classList.add('active');
+        tabBtnA.classList.remove('active');
+        renderHorizontal();
+      }
+    }
+
+    /* ========================================================================
+       TAB A: LOGIKA & RENDER VERTICAL SCALABILITY
+       ======================================================================== */
+
+    // Handler saat slider beban di Tab A digeser
+    function handleLoadChangeA(value) {
+      state.verticalLoad = parseInt(value, 10);
+      document.getElementById('sliderValLabelA').textContent = state.verticalLoad + ' req/s';
+      renderVertical();
+    }
+
+    // Handler tombol Naikkan / Turunkan spesifikasi (dengan simulasi downtime 1.5 detik)
+    function scaleVertical(direction) {
+      if (state.isRestarting) return;
+
+      const targetIndex = state.verticalTierIndex + direction;
+      if (targetIndex < 0 || targetIndex >= VERTICAL_TIERS.length) return;
+
+      // Mulai simulasi restart (downtime)
+      state.isRestarting = true;
+      state.lastVerticalAction = direction > 0 ? 'upgrade' : 'downgrade';
+
+      // Nonaktifkan tombol selama proses restart
+      updateVerticalButtons();
+      renderVerticalRestartState(true);
+
+      // Jeda 1.5 detik (1500 ms) untuk memperlihatkan downtime
+      setTimeout(() => {
+        state.verticalTierIndex = targetIndex;
+        state.isRestarting = false;
+        renderVerticalRestartState(false);
+        renderVertical();
+      }, 1500);
+    }
+
+    // Tampilan visual server saat fase restart (abu-abu dan overlay)
+    function renderVerticalRestartState(isRestarting) {
+      const serverBox = document.getElementById('serverBoxA');
+      const restartOverlay = document.getElementById('restartOverlayA');
+      const expPanel = document.getElementById('expPanelA');
+      const expIcon = document.getElementById('expIconA');
+      const expTitle = document.getElementById('expTitleA');
+      const expBody = document.getElementById('expBodyA');
+      const expPoints = document.getElementById('expPointsA');
+
+      if (isRestarting) {
+        serverBox.classList.add('restarting');
+        restartOverlay.style.display = 'flex';
+
+        // Tampilkan penjelasan downtime di panel
+        expPanel.className = 'explanation-panel status-restart';
+        expIcon.textContent = '⏳';
+        expTitle.textContent = 'Downtime Sedang Berlangsung (Server Restart)';
+        expBody.innerHTML = `
+          <p>
+            Saat spesifikasi dinaikkan atau diturunkan (Scale-Up / Scale-Down), server virtual atau fisik
+            <strong>harus dimatikan ulang (reboot)</strong> untuk mengalokasikan unit vCPU dan RAM baru.
+          </p>
+        `;
+        expPoints.innerHTML = `
+          <li><strong>Dampak Pengguna:</strong> Selama 1,5 detik ini, pembeli tiket yang sedang mengakses sistem akan menemui error <em>Connection Timeout</em> atau <em>HTTP 502/503 Service Unavailable</em>.</li>
+          <li><strong>Kelemahan Vertical:</strong> Skalabilitas vertikal tidak dapat dilakukan secara mulus (seamless) tanpa mengorbankan ketersediaan sistem (availability).</li>
+        `;
+      } else {
+        serverBox.classList.remove('restarting');
+        restartOverlay.style.display = 'none';
+      }
+    }
+
+    // Perbarui status disable tombol berdasarkan batas tier dan restart
+    function updateVerticalButtons() {
+      const btnDown = document.getElementById('btnScaleDownA');
+      const btnUp = document.getElementById('btnScaleUpA');
+
+      if (state.isRestarting) {
+        btnDown.disabled = true;
+        btnUp.disabled = true;
+        return;
+      }
+
+      btnDown.disabled = (state.verticalTierIndex <= 0);
+      btnUp.disabled = (state.verticalTierIndex >= VERTICAL_TIERS.length - 1);
+    }
+
+    // Render keseluruhan tampilan Tab A
+    function renderVertical() {
+      if (state.isRestarting) return;
+
+      const tier = VERTICAL_TIERS[state.verticalTierIndex];
+      const load = state.verticalLoad;
+      const capacity = tier.kapasitas;
+      const pct = Math.round((load / capacity) * 100);
+
+      // 1. Update ukuran dan kelas kotak server
+      const serverBox = document.getElementById('serverBoxA');
+      serverBox.classList.remove('tier-kecil', 'tier-sedang', 'tier-besar');
+      serverBox.classList.add(tier.cssClass);
+
+      // 2. Update teks spesifikasi
+      document.getElementById('serverNameA').textContent = `Server Utama (Tier ${tier.nama})`;
+      document.getElementById('tierBadgeA').textContent = `Tier: ${tier.nama}`;
+      document.getElementById('cpuBadgeA').textContent = `vCPU: ${tier.vcpu}`;
+      document.getElementById('ramBadgeA').textContent = `RAM: ${tier.ram}`;
+      document.getElementById('capBadgeA').textContent = `Kapasitas: ${capacity} req/s`;
+
+      document.getElementById('loadTextA').textContent = load;
+      document.getElementById('capTextA').textContent = capacity;
+      document.getElementById('pctTextA').innerHTML = `<strong>${pct}%</strong>`;
+
+      // 3. Tentukan status warna beban (<70% normal, 70-99% warning, >=100% overload)
+      let statusCategory = 'normal';
+      let statusLabel = 'Normal (<70%)';
+      let chipClass = 'chip-normal';
+      let barFillClass = 'normal';
+
+      if (pct >= 100) {
+        statusCategory = 'overload';
+        statusLabel = 'Overload (≥100%)';
+        chipClass = 'chip-overload';
+        barFillClass = 'overload';
+      } else if (pct >= 70) {
+        statusCategory = 'warning';
+        statusLabel = 'Hampir Penuh (70-99%)';
+        chipClass = 'chip-warning';
+        barFillClass = 'warning';
+      }
+
+      // Update chip status di server
+      const statusChip = document.getElementById('serverStatusChipA');
+      statusChip.className = `chip ${chipClass}`;
+      statusChip.textContent = statusLabel;
+
+      // Update bar beban (dibatasi 100% secara visual agar tidak tembus layout)
+      const loadBar = document.getElementById('loadBarA');
+      loadBar.className = `load-bar-fill ${barFillClass}`;
+      loadBar.style.width = Math.min(pct, 100) + '%';
+
+      document.getElementById('statusNoteA').textContent = `Beban: ${load} req/s dari kapasitas ${capacity} req/s`;
+
+      // 4. Update status tombol
+      updateVerticalButtons();
+
+      // 5. Update panel penjelasan dinamis
+      renderVerticalExplanation(statusCategory, tier, load, capacity, pct);
+    }
+
+    // Render teks penjelasan dinamis Tab A sesuai kondisi
+    function renderVerticalExplanation(status, tier, load, capacity, pct) {
+      const panel = document.getElementById('expPanelA');
+      const icon = document.getElementById('expIconA');
+      const title = document.getElementById('expTitleA');
+      const body = document.getElementById('expBodyA');
+      const points = document.getElementById('expPointsA');
+
+      if (status === 'overload') {
+        panel.className = 'explanation-panel status-overload';
+        icon.textContent = '🚨';
+        title.textContent = `Server Mengalami Overload (${pct}% Beban)!`;
+        body.innerHTML = `
+          <p>
+            Beban pengguna saat ini (<strong>${load} req/s</strong>) telah melampaui batas kapasitas server 
+            Tier ${tier.nama} (<strong>${capacity} req/s</strong>). Akibatnya, antrean request pembelian tiket 
+            menumpuk dan pengguna mengalami kegagalan transaksi.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Gejala:</strong> Waktu tunggu respons (latency) melonjak drastis, pemakaian CPU/RAM menyentuh 100%, dan terjadi <em>HTTP 504 Gateway Timeout</em>.</li>
+          <li><strong>Tindakan yang Dibutuhkan:</strong> Tekan tombol <strong>"Naikkan Spesifikasi"</strong> untuk meng-upgrade mesin ke tier yang lebih tinggi.</li>
+          ${tier.id === 2 ? '<li style="color: var(--rust); font-weight:700;">⚠️ Peringatan: Anda sudah berada di spesifikasi maksimum (Tier Besar). Skalabilitas vertikal telah mencapai batas hardware dan tidak bisa dinaikkan lagi!</li>' : ''}
+        `;
+      } else if (tier.id === 2) {
+        // Kasus Khusus: Berada di Tier Maksimum (Batas Hardware & SPOF)
+        panel.className = 'explanation-panel status-warning';
+        icon.textContent = '🛑';
+        title.textContent = 'Telah Mencapai Batas Maksimum Hardware (Tier Besar)';
+        body.innerHTML = `
+          <p>
+            Server kini berada pada spesifikasi tertinggi yang disimulasikan (4 vCPU, 8 GB RAM, 500 req/s). 
+            Ini memperlihatkan kelemahan fundamental dari <strong>Vertical Scalability</strong>.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Hardware Ceiling (Batas Fisik):</strong> Anda tidak bisa terus-menerus memperbesar 1 server karena keterbatasan motherboard, socket CPU, dan slot RAM yang ada di dunia nyata.</li>
+          <li><strong>Single Point of Failure (SPOF):</strong> Sistem hanya bergantung pada 1 server tunggal. Jika hardware server ini rusak atau mengalami mati listrik, seluruh sistem pemesanan tiket lumpuh total tanpa backup.</li>
+          <li><strong>Biaya Eksponensial:</strong> Menyewa mesin tier ultra-tinggi seringkali memakan biaya jauh lebih mahal per unit performa dibanding beberapa server standar.</li>
+        `;
+      } else if (status === 'warning') {
+        panel.className = 'explanation-panel status-warning';
+        icon.textContent = '⚠️';
+        title.textContent = `Kapasitas Hampir Penuh (${pct}% Terpakai)`;
+        body.innerHTML = `
+          <p>
+            Trafik tiket sedang tinggi (${load} req/s dari kapasitas ${capacity} req/s). Server masih mampu melayani, 
+            namun telah mendekati batas aman operasional (zona kuning).
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Rekomendasi:</strong> Disarankan bersiap menaikkan spesifikasi ke <strong>Tier ${VERTICAL_TIERS[tier.id + 1].nama}</strong> sebelum flash-sale tiket menyebabkan lonjakan traffic mendadak yang memicu crash.</li>
+        `;
+      } else {
+        // Kondisi Normal
+        panel.className = 'explanation-panel status-normal';
+        icon.textContent = '✅';
+        title.textContent = `Kondisi Operasional Normal (${pct}% Terpakai)`;
+        body.innerHTML = `
+          <p>
+            Server Tier ${tier.nama} beroperasi dengan stabil melayani beban <strong>${load} req/s</strong> 
+            (kapasitas tersedia: ${capacity} req/s).
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Kelebihan Skalabilitas Vertikal:</strong> Arsitektur sangat sederhana karena aplikasi tidak memerlukan Load Balancer, database replication, atau sinkronisasi data antar node.</li>
+          <li><strong>Kapan Digunakan:</strong> Cocok untuk tahap awal pengembangan sistem atau aplikasi monolitik yang belum mendukung arsitektur multi-server.</li>
+        `;
+      }
+    }
+
+    /* ========================================================================
+       TAB B: LOGIKA & RENDER HORIZONTAL SCALABILITY
+       ======================================================================== */
+
+    // Handler saat slider beban di Tab B digeser
+    function handleLoadChangeB(value) {
+      state.horizontalLoad = parseInt(value, 10);
+      document.getElementById('sliderValLabelB').textContent = state.horizontalLoad + ' req/s';
+      renderHorizontal();
+    }
+
+    // Handler tombol Scale-Out (+) dan Scale-In (-)
+    function scaleHorizontal(delta) {
+      const targetCount = state.horizontalNodes + delta;
+      // Batasi 1 sampai 5 node
+      if (targetCount < 1 || targetCount > 5) return;
+
+      state.horizontalNodes = targetCount;
+      state.lastHorizontalAction = delta > 0 ? 'scale_out' : 'scale_in';
+      renderHorizontal();
+    }
+
+    // Render keseluruhan tampilan Tab B
+    function renderHorizontal() {
+      const nodeCount = state.horizontalNodes;
+      const totalLoad = state.horizontalLoad;
+      const totalCapacity = nodeCount * state.nodeCapacity;
+      const overallPct = Math.round((totalLoad / totalCapacity) * 100);
+
+      // Beban per node dibagi rata oleh Load Balancer
+      const loadPerNode = Math.round(totalLoad / nodeCount);
+      const nodePct = Math.round((loadPerNode / state.nodeCapacity) * 100);
+
+      // 1. Update Badge dan Banner
+      document.getElementById('nodeCountBadgeB').textContent = `${nodeCount} Server Aktif`;
+      document.getElementById('totalCapBadgeB').textContent = `${totalCapacity} req/s`;
+      document.getElementById('lbDistText').textContent = 
+        `Membagi total ${totalLoad} req/s secara merata ke ${nodeCount} server (~${loadPerNode} req/s per server)`;
+
+      // 2. Update Tombol Scale-Out / Scale-In
+      document.getElementById('btnScaleInB').disabled = (nodeCount <= 1);
+      document.getElementById('btnScaleOutB').disabled = (nodeCount >= 5);
+
+      // 3. Tentukan status beban per server
+      let statusCategory = 'normal';
+      let statusLabel = 'Normal (<70%)';
+      let chipClass = 'chip-normal';
+      let barFillClass = 'normal';
+
+      if (nodePct >= 100) {
+        statusCategory = 'overload';
+        statusLabel = 'Overload (≥100%)';
+        chipClass = 'chip-overload';
+        barFillClass = 'overload';
+      } else if (nodePct >= 70) {
+        statusCategory = 'warning';
+        statusLabel = 'Hampir Penuh (70-99%)';
+        chipClass = 'chip-warning';
+        barFillClass = 'warning';
+      }
+
+      // 4. Render Kartu Server-Server Horisontal di Grid
+      const grid = document.getElementById('serversGridB');
+      grid.innerHTML = '';
+
+      for (let i = 1; i <= nodeCount; i++) {
+        const nodeCard = document.createElement('div');
+        nodeCard.className = 'server-box-horizontal';
+        nodeCard.innerHTML = `
+          <div>
+            <div class="server-node-header">
+              <span class="server-node-name">🖥️ Node #${i}</span>
+              <span class="chip ${chipClass}" style="font-size: 0.7rem; padding: 2px 8px;">${statusLabel}</span>
+            </div>
+            <div class="server-node-spec">1 vCPU • 1 GB RAM</div>
+          </div>
+          <div>
+            <div class="node-metrics">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <span>Beban:</span>
+                <strong>${loadPerNode} / 100 req/s</strong>
+              </div>
+              <div class="load-bar-wrap" style="height: 8px; margin: 4px 0;">
+                <div class="load-bar-fill ${barFillClass}" style="width: ${Math.min(nodePct, 100)}%;"></div>
+              </div>
+              <div style="text-align: right; font-weight: 600; color: var(--cream);">
+                ${nodePct}%
+              </div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(nodeCard);
+      }
+
+      // 5. Update Panel Penjelasan Dinamis Tab B
+      renderHorizontalExplanation(statusCategory, nodeCount, totalLoad, totalCapacity, nodePct, overallPct);
+    }
+
+    // Render teks penjelasan dinamis Tab B sesuai kondisi
+    function renderHorizontalExplanation(status, count, totalLoad, totalCapacity, nodePct, overallPct) {
+      const panel = document.getElementById('expPanelB');
+      const icon = document.getElementById('expIconB');
+      const title = document.getElementById('expTitleB');
+      const body = document.getElementById('expBodyB');
+      const points = document.getElementById('expPointsB');
+
+      if (status === 'overload') {
+        panel.className = 'explanation-panel status-overload';
+        icon.textContent = '🚨';
+        title.textContent = `Cluster Mengalami Overload (Tiap Node ${nodePct}%)!`;
+        body.innerHTML = `
+          <p>
+            Total trafik pemesanan tiket (<strong>${totalLoad} req/s</strong>) telah melebihi kapasitas 
+            keseluruhan cluster (${count} server x 100 = <strong>${totalCapacity} req/s</strong>). 
+            Semua server berada di ambang batas maksimum.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Solusi Mudah (Scale-Out):</strong> Tekan tombol <strong>"➕ Scale-Out"</strong> untuk menambahkan server baru ke cluster. Beban akan langsung terbagi ulang secara otomatis tanpa mematikan sistem (Zero Downtime).</li>
+          ${count === 5 ? '<li style="color: var(--rust); font-weight:700;">⚠️ Pada simulasi ini batas maksimal adalah 5 server, namun di cloud nyata (seperti AWS Auto Scaling / GCP Instance Groups), Anda dapat menambah puluhan hingga ratusan server secara elastis.</li>' : ''}
+        `;
+      } else if (state.lastHorizontalAction === 'scale_out') {
+        panel.className = 'explanation-panel status-normal';
+        icon.textContent = '🚀';
+        title.textContent = `Scale-Out Berhasil: Kapasitas Bertambah Tanpa Downtime`;
+        body.innerHTML = `
+          <p>
+            Anda baru saja menambah server menjadi <strong>${count} unit</strong>. Total kapasitas kini meningkat 
+            menjadi <strong>${totalCapacity} req/s</strong>.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Zero Downtime (Ketersediaan Tinggi):</strong> Penambahan instance baru tidak memerlukan restart pada server yang sedang berjalan. Load Balancer secara otomatis mendeteksi server baru (Health Check) dan mulai mendistribusikan trafik ke sana.</li>
+          <li><strong>Fault Tolerance (Toleransi Kesalahan):</strong> Jika Node #1 mengalami crash tiba-tiba, aplikasi tidak padam total! Load Balancer akan langsung mengalihkan request pembeli tiket ke ${count - 1} node lainnya.</li>
+        `;
+      } else if (state.lastHorizontalAction === 'scale_in') {
+        panel.className = 'explanation-panel status-normal';
+        icon.textContent = '📉';
+        title.textContent = `Scale-In Berhasil: Penghematan Biaya Operasional Cloud`;
+        body.innerHTML = `
+          <p>
+            Server berhasil dikurangi menjadi <strong>${count} unit</strong>. Kapasitas saat ini disesuaikan 
+            menjadi <strong>${totalCapacity} req/s</strong>.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Efisiensi Biaya (Cost Optimization):</strong> Pada malam hari saat penjualan tiket sepi, mempertahankan 5 server yang menyala adalah pemborosan dana cloud. Dengan Scale-In, instance yang tidak terpakai diterminasi sehingga biaya sewa berkurang (prinsip <em>Pay-as-you-go</em>).</li>
+          <li><strong>Graceful Shutdown:</strong> Server yang akan dimatikan menyelesaikan transaksi tiket yang sedang berlangsung terlebih dahulu sebelum dilepas dari Load Balancer.</li>
+        `;
+      } else if (count > 2 && overallPct < 35) {
+        // Kasus: Beban sangat rendah dengan banyak server aktif (Pemborosan)
+        panel.className = 'explanation-panel status-warning';
+        icon.textContent = '💡';
+        title.textContent = `Deteksi Utilisasi Rendah (Saran: Scale-In)`;
+        body.innerHTML = `
+          <p>
+            Trafik hanya <strong>${totalLoad} req/s</strong>, namun cluster menjalankan <strong>${count} server</strong> 
+            (kapasitas total ${totalCapacity} req/s, utilisasi hanya ${overallPct}%).
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Pemborosan Sumber Daya:</strong> Sebagian besar server berada dalam kondisi idle (menganggur).</li>
+          <li><strong>Rekomendasi Cloud:</strong> Lakukan <strong>Scale-In</strong> dengan menekan tombol <strong>"➖ Scale-In"</strong> untuk mengurangi jumlah server dan memangkas tagihan infrastruktur cloud.</li>
+        `;
+      } else {
+        // Kondisi Seimbang
+        panel.className = 'explanation-panel status-normal';
+        icon.textContent = '⚖️';
+        title.textContent = `Distribusi Beban Seimbang (Load Balancing Optimal)`;
+        body.innerHTML = `
+          <p>
+            Load Balancer berhasil membagi rata total beban <strong>${totalLoad} req/s</strong> ke ${count} server. 
+            Masing-masing server hanya memikul beban sekitar <strong>${Math.round(totalLoad / count)} req/s (${nodePct}%)</strong>.
+          </p>
+        `;
+        points.innerHTML = `
+          <li><strong>Karakteristik Utama:</strong> Beban dibagi secara simetris (metode Round Robin atau Least Connections), menjaga respons aplikasi tetap cepat dan stabil.</li>
+          <li><strong>Kebutuhan Desain:</strong> Aplikasi Sistem Tiket harus bersifat <em>stateless</em> (data session/tiket disimpan di basis data terpusat, bukan di memori lokal satu server).</li>
+        `;
+      }
+    }
+
+    /* ========================================================================
+       INISIALISASI SAAT HALAMAN DIMUAT
+       ======================================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      // Inisialisasi Tab A dan Tab B
+      renderVertical();
+      renderHorizontal();
+    });
+  </script>
+
+</body>
+</html>
