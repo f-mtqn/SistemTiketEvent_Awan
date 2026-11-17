@@ -249,11 +249,59 @@ tbody td.actions {
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.filter-bar .field { display: flex; flex-direction: column; gap: 4px; }
-.filter-bar label  { font-size: .8125rem; font-weight: 600; color: var(--slate); }
+.filter-bar .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-bar label {
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--slate);
+  letter-spacing: .02em;
+}
+
+.filter-bar select {
+  height: 36px;
+  min-height: 36px;
+  min-width: 180px;
+  padding: 0 34px 0 12px;
+  border: 1.5px solid var(--slate);
+  border-radius: var(--radius-sm);
+  background-color: var(--input-bg);
+  color: var(--navy);
+  font-family: inherit;
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%232C3B4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1.5 1.75L6 6.25L10.5 1.75'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px 7px;
+  transition: border-color .15s, background-color .15s, box-shadow .15s;
+}
+
+.filter-bar select:hover:not(:disabled) {
+  border-color: var(--navy);
+  background-color: #ffffff;
+}
+
+.filter-bar select:focus {
+  outline: 3px solid var(--slate);
+  outline-offset: 2px;
+}
+
+select option {
+  background-color: var(--cream-light);
+  color: var(--navy);
+}
 
 /* ─── Forms ──────────────────────────────────────────────────────────────── */
 .form-row {
@@ -281,7 +329,7 @@ tbody td.actions {
   color: var(--slate);
 }
 
-.field-group input,
+.field-group input:not([type="radio"]):not([type="checkbox"]),
 .field-group select {
   min-height: 48px;
   padding: 0 14px;
@@ -291,15 +339,34 @@ tbody td.actions {
   color: var(--navy);
   font-size: .9375rem;
   font-family: inherit;
+  transition: border-color .15s, background-color .15s;
 }
 
-.field-group input:focus,
+.field-group select {
+  padding-right: 38px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%232C3B4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1.5 1.75L6 6.25L10.5 1.75'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 11px 7px;
+}
+
+.field-group input:not([type="radio"]):not([type="checkbox"]):hover:not(:disabled),
+.field-group select:hover:not(:disabled) {
+  border-color: var(--navy);
+  background-color: #ffffff;
+}
+
+.field-group input:not([type="radio"]):not([type="checkbox"]):focus,
 .field-group select:focus {
   outline: 3px solid var(--slate);
   outline-offset: 2px;
 }
 
-.field-group input:disabled,
+.field-group input:not([type="radio"]):not([type="checkbox"]):disabled,
 .field-group select:disabled {
   opacity: .6;
   cursor: not-allowed;
@@ -316,12 +383,61 @@ tbody td.actions {
 }
 
 /* Radio group */
-.radio-group { display: flex; gap: 20px; }
-.radio-group label {
-  display: flex; align-items: center; gap: 6px;
-  font-weight: 400; color: var(--navy); cursor: pointer;
+.radio-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.radio-group input[type="radio"] { accent-color: var(--slate); width: 18px; height: 18px; }
+
+.radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1.5px solid var(--sand);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--navy);
+  font-size: .9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+
+.radio-group label:hover {
+  border-color: var(--slate);
+  background: #ffffff;
+}
+
+.radio-group label:has(input[type="radio"]:checked) {
+  border-color: var(--slate);
+  background: var(--cream-light);
+  font-weight: 600;
+}
+
+.radio-group input[type="radio"] {
+  accent-color: var(--slate);
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.radio-group input[type="radio"]:focus {
+  outline: none;
+}
+
+.radio-group input[type="radio"]:focus-visible {
+  outline: 2px solid var(--slate);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
 
 /* ─── Form actions ───────────────────────────────────────────────────────── */
 .form-actions {
